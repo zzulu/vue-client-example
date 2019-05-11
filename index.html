@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+  <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+</head>
+<body>
+  <div id="app">
+    <div v-if="!token">
+      <input type="text" v-model="login.username" placeholder="Username">
+      <input type="password" v-model="login.password" placeholder="Password">
+      <button @click="authLogin"> > </button>
+    </div>
+    <ul>
+      <li v-for="post in posts">
+        <div>
+          {{ post.user_name }} - {{ post.title }}
+        </div>
+        <ul>
+          <li v-for="comment in post.comments">
+              {{ comment.content }} <button v-on:click="deleteComment(post, comment)"> x </button>
+          </li>
+        </ul>
+        <div v-if="token">
+          <input type="text" v-model="post.newComment" @keyup.enter="addComment(post)">
+          <button @click="addComment(post)"> + </button>
+        </div>
+      </li>
+    </ul>
+  </div>
+  
+  <script>
+    const app = new Vue({
+      el: '#app',
+      data: {
+        token: '',
+        login: {
+          username: '',
+          password: '',
+        },
+        posts: [],
+      },
+      methods: {
+        getPosts: function(){
+          axios.get('http://localhost:8000/api/v1/posts/')
+                .then((response)=>{
+                  return response.data
+                })
+                .then((posts)=>{
+                  this.posts = posts.map((post)=>{
+                    return { ...post, newComment:'' }
+                  })
+                })
+                .catch((error)=>{
+                  console.log(error)
+                })
+        },
+        addComment: function(post){
+          axios.post(`http://localhost:8000/api/v1/posts/${post.id}/comments/`, {content: post.newComment}, {
+                    headers: {
+                      'Authorization': `JWT ${this.token}`
+                    },
+                  })
+                  .then((response)=>{
+                    return response.data
+                  })
+                  .then((comment)=>{
+                    post.comments.push(comment)
+                    post.newComment = ''
+                  })
+                  .catch((error)=>{
+                    console.log(error.response)
+                  })
+        },
+        deleteComment: function(post, comment){
+          axios.delete(`http://localhost:8000/api/v1/posts/${post.id}/comments/${comment.id}`)
+                  .then((response)=>{
+                    post.comments = post.comments.filter((c)=>{
+                      return c.id !== comment.id
+                    })
+                  })
+                  .catch((error)=>{
+                    console.log(error.response)
+                  })
+        },
+        authLogin: function(){
+          axios.post(`http://localhost:8000/api/v1/token-auth/`, {username: this.login.username, password: this.login.password})
+                  .then((response)=>{
+                    return response.data.token
+                  })
+                  .then((token)=>{
+                    this.token = token
+                  })
+                  .catch((error)=>{
+                    console.log(error.response.data)
+                  })
+                  .then(()=>{
+                    this.login.username = ''
+                    this.login.password = ''
+                  })
+        },
+      },
+      mounted: function(){
+        this.getPosts()
+      }
+    })
+  </script>
+</body>
+</html>
