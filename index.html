@@ -10,22 +10,25 @@
 </head>
 <body>
   <div id="app">
-    <div v-if="!token">
+    <form @submit.prevent="getToken" v-if="!isAuthenticated">
       <input type="text" v-model="login.username" placeholder="Username">
       <input type="password" v-model="login.password" placeholder="Password">
-      <button @click="authLogin"> > </button>
-    </div>
+      <button> > </button>
+    </form>
+    <nav v-else>
+      <button @click="authLogout">Logout</button>
+    </nav>
     <ul>
       <li v-for="post in posts">
         <div>
-          {{ post.user_name }} - {{ post.title }}
+          <b>{{ post.user_name }}</b> {{ post.title }}
         </div>
         <ul>
           <li v-for="comment in post.comments">
-              {{ comment.content }} <button v-on:click="deleteComment(post, comment)"> x </button>
+            <b>{{ comment.user_name }}</b> {{ comment.content }} <button @click="deleteComment(post, comment)"> x </button>
           </li>
         </ul>
-        <div v-if="token">
+        <div v-if="isAuthenticated">
           <input type="text" v-model="post.newComment" @keyup.enter="addComment(post)">
           <button @click="addComment(post)"> + </button>
         </div>
@@ -37,16 +40,18 @@
     const app = new Vue({
       el: '#app',
       data: {
-        token: '',
+        serverUrl: 'http://localhost:8000',
+        authToken: '',
         login: {
           username: '',
           password: '',
         },
+        loading: true,
         posts: [],
       },
       methods: {
         getPosts: function(){
-          axios.get('http://localhost:8000/api/v1/posts/')
+          axios.get(`${this.serverUrl}/api/v1/posts/`)
                 .then((response)=>{
                   return response.data
                 })
@@ -54,16 +59,18 @@
                   this.posts = posts.map((post)=>{
                     return { ...post, newComment:'' }
                   })
+                  this.loading = false
                 })
                 .catch((error)=>{
                   console.log(error)
                 })
         },
         addComment: function(post){
-          axios.post(`http://localhost:8000/api/v1/posts/${post.id}/comments/`, {content: post.newComment}, {
-                    headers: {
-                      'Authorization': `JWT ${this.token}`
-                    },
+          axios.post(`${this.serverUrl}/api/v1/posts/${post.id}/comments/`, {content: post.newComment}, {
+                    // headers: {
+                    //   'Authorization': `Bearer ${this.authToken}`
+                    // }, // Header or Cookie, 둘 중 하나의 방법을 사용.
+                    withCredentials: true,
                   })
                   .then((response)=>{
                     return response.data
@@ -77,7 +84,12 @@
                   })
         },
         deleteComment: function(post, comment){
-          axios.delete(`http://localhost:8000/api/v1/posts/${post.id}/comments/${comment.id}`)
+          axios.delete(`${this.serverUrl}/api/v1/posts/${post.id}/comments/${comment.id}/`, {
+                    headers: {
+                      'Authorization': `Bearer ${this.authToken}`
+                    },
+                    // withCredentials: true, // Header or Cookie, 둘 중 하나의 방법을 사용.
+                  })
                   .then((response)=>{
                     post.comments = post.comments.filter((c)=>{
                       return c.id !== comment.id
@@ -87,13 +99,13 @@
                     console.log(error.response)
                   })
         },
-        authLogin: function(){
-          axios.post(`http://localhost:8000/api/v1/token-auth/`, {username: this.login.username, password: this.login.password})
+        getToken: function(){
+          axios.post(`${this.serverUrl}/api/v1/token-auth/`, {username: this.login.username, password: this.login.password}, {withCredentials: true})
                   .then((response)=>{
                     return response.data.token
                   })
-                  .then((token)=>{
-                    this.token = token
+                  .then((authToken)=>{
+                    this.authToken = authToken
                   })
                   .catch((error)=>{
                     console.log(error.response.data)
@@ -103,10 +115,37 @@
                     this.login.password = ''
                   })
         },
+        authLogout: function(){
+          this.authToken = ''
+        },
+        verifyToken: function(){
+          axios.post(`${this.serverUrl}/api/v1/token-verify/`, {token: this.authToken})
+                  .then((response)=>{
+                    return response.data.token
+                  })
+                  .then((authToken)=>{
+                    this.authToken = authToken
+                  })
+        },
       },
       mounted: function(){
+        this.authToken = localStorage.getItem('auth_token') || ''
         this.getPosts()
-      }
+      },
+      watch: {
+        authToken: function(authToken){
+          if (authToken) {
+            localStorage.setItem('auth_token', authToken)
+          } else {
+            localStorage.removeItem('auth_token')
+          }
+        }
+      },
+      computed: {
+        isAuthenticated: function(){
+          return this.authToken ? true : false
+        }
+      },
     })
   </script>
 </body>
