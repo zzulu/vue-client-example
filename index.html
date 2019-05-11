@@ -67,10 +67,10 @@
         },
         addComment: function(post){
           axios.post(`${this.serverUrl}/api/v1/posts/${post.id}/comments/`, {content: post.newComment}, {
-                    // headers: {
-                    //   'Authorization': `Bearer ${this.authToken}`
-                    // }, // Header or Cookie, 둘 중 하나의 방법을 사용.
-                    withCredentials: true,
+                    headers: {
+                      'Authorization': `Bearer ${this.authToken}`
+                    }, 
+                    // withCredentials: true,
                   })
                   .then((response)=>{
                     return response.data
@@ -126,10 +126,16 @@
                   .then((authToken)=>{
                     this.authToken = authToken
                   })
+                  .catch((error)=>{
+                    this.authToken = ''
+                  })
         },
       },
       mounted: function(){
         this.authToken = localStorage.getItem('auth_token') || ''
+        if (this.authToken) {
+          this.verifyToken()
+        }
         this.getPosts()
       },
       watch: {
