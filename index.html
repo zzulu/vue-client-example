@@ -100,7 +100,7 @@
                   })
         },
         getToken: function(){
-          axios.post(`${this.serverUrl}/api/v1/token-auth/`, {username: this.login.username, password: this.login.password}, {withCredentials: true})
+          axios.post(`${this.serverUrl}/api/v1/token-auth/`, {username: this.login.username, password: this.login.password})
                   .then((response)=>{
                     return response.data.token
                   })
