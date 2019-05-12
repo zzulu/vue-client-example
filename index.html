@@ -18,22 +18,28 @@
     <nav v-else>
       <button @click="authLogout">Logout</button>
     </nav>
-    <ul>
-      <li v-for="post in posts">
-        <div>
-          <b>{{ post.user_name }}</b> {{ post.title }}
-        </div>
-        <ul>
-          <li v-for="comment in post.comments">
-            <b>{{ comment.user_name }}</b> {{ comment.content }} <button @click="deleteComment(post, comment)"> x </button>
-          </li>
-        </ul>
-        <div v-if="isAuthenticated">
-          <input type="text" v-model="post.newComment" @keyup.enter="addComment(post)">
-          <button @click="addComment(post)"> + </button>
-        </div>
-      </li>
-    </ul>
+    <div v-if="!loading">
+      <ul>
+        <li v-for="post in posts">
+          <div>
+            <b>{{ post.user_name }}</b> {{ post.title }}
+          </div>
+          <ul>
+            <li v-for="comment in post.comments">
+              <b>{{ comment.user_name }}</b> {{ comment.content }} <button @click="deleteComment(post, comment)"> x </button>
+            </li>
+          </ul>
+          <div v-if="isAuthenticated">
+            <input type="text" v-model="post.newComment" @keyup.enter="addComment(post)">
+            <button @click="addComment(post)"> + </button>
+          </div>
+        </li>
+      </ul>
+    </div>
+    
+    <div v-else>
+      <h3>Loading...</h3>
+    </div>
   </div>
   
   <script>
